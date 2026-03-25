@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let myId = null;
     let unreadCount = 0;
     let isChatExpanded = false;
+    let timerInterval = null;
 
     // UI Elements
     const boardEl = document.getElementById('board');
@@ -84,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnUseCard = document.getElementById('btn-use-card');
     const btnTrade = document.getElementById('btn-trade');
     const btnConcede = document.getElementById('btn-concede');
+    const btnLeave = document.getElementById('btn-leave');
 
     // Modals
     const tradeModal = document.getElementById('trade-modal');
@@ -109,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateActions();
         handleModals();
         renderDice(state.dice);
+        updateTurnTimer(state);
 
         turnIndicator.classList.remove('hidden');
         const currentP = state.players.find(p => p.id === state.currentPlayerId);
@@ -161,6 +164,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnUseCard.onclick = () => socket.emit('game:jail:card');
     btnConcede.onclick = () => { if(confirm("Are you sure you want to concede?")) socket.emit('game:concede'); };
     btnTrade.onclick = () => openTradeModal();
+    btnLeave.onclick = () => {
+        if (confirm("Leave game? You'll be replaced by a bot.")) {
+            socket.emit('game:leave');
+            window.location.href = 'lobby.html';
+        }
+    };
 
     function renderDice(dice) {
         const d1 = document.getElementById('die1');
@@ -189,6 +198,38 @@ document.addEventListener('DOMContentLoaded', () => {
             d1.classList.remove('rolling');
             d2.classList.remove('rolling');
         }, 600);
+    }
+
+    function updateTurnTimer(state) {
+        const wrap = document.getElementById('turn-timer-wrap');
+        const text = document.getElementById('turn-timer-text');
+        const bar = document.getElementById('turn-timer-bar');
+
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+        if (!state.turnDeadline || state.phase === 'gameover' ||
+            state.phase === 'auction' || state.phase === 'trade') {
+            wrap.classList.add('hidden');
+            return;
+        }
+
+        wrap.classList.remove('hidden');
+
+        const timeoutSec = Math.round((state.turnTimeoutMs || 30000) / 1000);
+
+        function tick() {
+            const remaining = Math.max(0, Math.ceil((state.turnDeadline - Date.now()) / 1000));
+            text.textContent = remaining + 's';
+            const pct = (remaining / timeoutSec) * 100;
+            bar.style.width = pct + '%';
+            if (remaining <= 5) bar.className = 'timer-critical';
+            else if (remaining <= 10) bar.className = 'timer-warn';
+            else bar.className = '';
+            if (remaining <= 0) { clearInterval(timerInterval); timerInterval = null; }
+        }
+
+        tick();
+        timerInterval = setInterval(tick, 500);
     }
 
     function renderBoard() {

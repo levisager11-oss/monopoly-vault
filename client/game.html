@@ -12,6 +12,10 @@
     <div class="game-layout">
         <!-- Sidebar -->
         <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">MONOPOLY VAULT</span>
+                <button id="btn-leave" class="leave-btn" title="Leave game"><i data-lucide="log-out"></i> LEAVE</button>
+            </div>
             <div id="players-panel">
                 <!-- Player items here -->
             </div>
@@ -40,6 +44,12 @@
                     <div class="center-area">
                         <div class="logo-text">MONOPOLY</div>
                         <h2 id="turn-indicator" class="hidden"></h2>
+                        <div id="turn-timer-wrap" class="hidden">
+                            <div id="turn-timer-bar-track">
+                                <div id="turn-timer-bar"></div>
+                            </div>
+                            <span id="turn-timer-text">30s</span>
+                        </div>
                         <div id="dice-display">
                             <div id="die1" class="die-face"></div>
                             <div id="die2" class="die-face"></div>

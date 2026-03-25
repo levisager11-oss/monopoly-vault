@@ -19,6 +19,47 @@
     z-index: 100;
 }
 
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-raised);
+    flex-shrink: 0;
+}
+
+.sidebar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-gold);
+    letter-spacing: 0.08em;
+}
+
+.leave-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid rgba(192, 57, 43, 0.5);
+    color: var(--color-red);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.leave-btn:hover {
+    background: rgba(192, 57, 43, 0.15);
+    border-color: var(--color-red);
+}
+
+.leave-btn i { width: 12px; height: 12px; }
+
 #players-panel {
     flex: 1;
     overflow-y: auto;
@@ -156,15 +197,25 @@
 #game-log {
     flex: 1;
     overflow-y: auto;
-    padding: 12px;
-    font-size: 0.85rem;
+    padding: 10px 12px;
+    font-size: 0.83rem;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    line-height: 1.45;
 }
 
-.msg-system { font-style: italic; color: var(--color-ivory-muted); }
-.msg-player { color: var(--color-ivory); }
+.msg-system {
+    font-style: italic;
+    color: var(--color-ivory-muted);
+    padding: 2px 0;
+    border-left: 2px solid var(--color-border);
+    padding-left: 6px;
+}
+.msg-player {
+    color: var(--color-ivory);
+    font-weight: 500;
+}
 
 #game-chat-form {
     padding: 8px;
@@ -236,8 +287,17 @@
 .space.left .space-content { transform: rotate(90deg); }
 .space.right .space-content { transform: rotate(-90deg); }
 
-.space-name { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; line-height: 1; }
-.space-price { font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 600; margin-top: 2px; }
+.space-name {
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.25;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    text-align: center;
+}
+.space-price { font-family: 'DM Mono', monospace; font-size: 0.63rem; font-weight: 600; margin-top: 2px; }
 
 /* Center Area */
 .center-area {
@@ -262,9 +322,48 @@
     border-radius: 20px;
     border: 1px solid var(--color-gold);
     color: var(--color-ivory);
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     z-index: 10;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* Turn timer */
+#turn-timer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 18px;
+}
+
+#turn-timer-bar-track {
+    width: 120px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+#turn-timer-bar {
+    height: 100%;
+    width: 100%;
+    background: var(--color-gold);
+    border-radius: 2px;
+    transition: width 0.5s linear, background 0.3s ease;
+}
+
+#turn-timer-bar.timer-warn { background: #e67e22; }
+#turn-timer-bar.timer-critical { background: var(--color-red); }
+
+#turn-timer-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--color-ivory-muted);
+    letter-spacing: 0.04em;
 }
 
 /* Dice */

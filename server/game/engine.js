@@ -3,6 +3,8 @@ const { chanceCards, communityChestCards } = require('./cards');
 const db = require('../db');
 const Bot = require('./bot');
 
+const TURN_TIMEOUT_MS = 30000;
+
 function shuffle(array) {
   let currentIndex = array.length,  randomIndex;
   while (currentIndex != 0) {
@@ -80,6 +82,10 @@ class GameEngine {
         this.players.forEach(p => {
             if (p.isBot) this.bots[p.id] = new Bot(this, p.id, p.botDifficulty);
         });
+
+        this.turnTimer = null;
+        this.turnDeadline = null;
+        this._timerKey = null;
     }
 
     start() {
@@ -117,6 +123,8 @@ class GameEngine {
             winner: this.winner,
             auction: this.auction,
             trade: this.trade,
+        turnDeadline: this.turnDeadline,
+        turnTimeoutMs: TURN_TIMEOUT_MS,
             log: this.log.slice(-20)
         };
     }
@@ -127,6 +135,7 @@ class GameEngine {
             this.io.to(targetSocketId).emit('game:state', state);
         } else {
             this.io.to(this.gameId).emit('game:state', state);
+            this._maybeStartTurnTimer();
         }
     }
 
@@ -159,6 +168,63 @@ class GameEngine {
             }
             player.socketId = socketId;
             this.broadcastState(); // send full state back
+        }
+    }
+
+    handleLeave(userId) {
+        const player = this.players.find(p => p.id === userId);
+        if (player && !player.isBankrupt) {
+            this.addLog(`${player.name} left the game. Replaced by Bot (Medium).`);
+            player.isBot = true;
+            player.botDifficulty = 'medium';
+            this.bots[player.id] = new Bot(this, player.id, 'medium');
+            this.broadcastState();
+            this.checkBotTurn();
+        }
+    }
+
+    startTurnTimer() {
+        if (this.turnTimer) clearTimeout(this.turnTimer);
+        this.turnTimer = null;
+        this.turnDeadline = null;
+
+        const currentP = this.players[this.currentPlayerIndex];
+        if (!currentP || currentP.isBankrupt || this.phase === 'gameover' ||
+            this.phase === 'auction' || this.phase === 'trade') return;
+
+        this.turnDeadline = Date.now() + TURN_TIMEOUT_MS;
+        const playerId = currentP.id;
+        const phase = this.phase;
+
+        this.turnTimer = setTimeout(() => {
+            this.turnTimer = null;
+            if (this.phase === phase && this.players[this.currentPlayerIndex]?.id === playerId) {
+                this.addLog(`${currentP.name}'s turn timed out.`);
+                if (phase === 'waiting_roll') {
+                    this.handleAction(playerId, { type: 'roll' });
+                } else if (phase === 'waiting_action') {
+                    this.handleAction(playerId, { type: 'end_turn' });
+                }
+            }
+        }, TURN_TIMEOUT_MS);
+    }
+
+    clearTurnTimer() {
+        if (this.turnTimer) {
+            clearTimeout(this.turnTimer);
+            this.turnTimer = null;
+        }
+        this.turnDeadline = null;
+        this._timerKey = null;
+    }
+
+    _maybeStartTurnTimer() {
+        const currentP = this.players[this.currentPlayerIndex];
+        if (!currentP) return;
+        const key = `${currentP.id}:${this.phase}`;
+        if (key !== this._timerKey) {
+            this._timerKey = key;
+            this.startTurnTimer();
         }
     }
 
@@ -221,6 +287,8 @@ class GameEngine {
     handleAction(userId, action) {
         const player = this.players.find(p => p.id === userId);
         if (!player || player.isBankrupt || this.phase === 'gameover') return;
+
+        this.clearTurnTimer();
 
         const isCurrentTurn = player.id === this.players[this.currentPlayerIndex].id;
 
@@ -461,6 +529,7 @@ class GameEngine {
 
     endGame(winner) {
         this.phase = 'gameover';
+        this.clearTurnTimer();
         this.players.forEach(p => {
             if (!p.isBot) {
                 db.run(`UPDATE stats SET games_played = games_played + 1 WHERE user_id = ?`, [p.id]);
