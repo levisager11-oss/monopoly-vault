@@ -235,8 +235,14 @@ class GameEngine {
         }
 
         if (isCurrentTurn) {
-            if (this.phase === 'waiting_roll' && action.type === 'roll') {
-                this.rollDice();
+            if (this.phase === 'waiting_roll') {
+                if (action.type === 'roll') {
+                    this.rollDice();
+                } else if (action.type === 'pay_jail') {
+                    this.payJail(player);
+                } else if (action.type === 'use_card_jail') {
+                    this.useJailCard(player);
+                }
             } else if (this.phase === 'waiting_action') {
                 if (action.type === 'buy') this.buyProperty(player);
                 if (action.type === 'auction') this.startAuction();
@@ -275,7 +281,12 @@ class GameEngine {
                 currentP.jailTurns++;
                 if (currentP.jailTurns >= 3) {
                     this.addLog(`${currentP.name} must pay CHF 50 to escape jail.`);
-                    this.payMoney(currentP, 50, null);
+                    if (this.rules.freeParking) {
+                        this.freeParking += 50;
+                        this.payMoney(currentP, 50, 'pot');
+                    } else {
+                        this.payMoney(currentP, 50, null);
+                    }
                     if (!currentP.isBankrupt) {
                         currentP.inJail = false;
                         currentP.jailTurns = 0;
@@ -571,6 +582,8 @@ class GameEngine {
         const currentP = this.players[this.currentPlayerIndex];
         if (this.dice[0] === this.dice[1] && currentP.doublesCount > 0 && !currentP.inJail) {
             this.phase = 'waiting_roll';
+            this.broadcastState();
+            this.checkBotTurn();
         } else {
             this.nextTurn();
         }
@@ -596,8 +609,9 @@ class GameEngine {
             let oldPos = player.position;
             player.position = card.target;
             if (player.position < oldPos && card.target !== 10) { 
-                player.balance += 200;
-                this.addLog(`${player.name} passed Go and collected CHF 200.`);
+                const salary = this.rules.doubleGo && card.target === 0 ? 400 : 200;
+                player.balance += salary;
+                this.addLog(`${player.name} passed Go and collected CHF ${salary}.`);
             }
             this.handleSpace(player);
         } else if (card.action === 'advance_utility' || card.action === 'advance_railroad') {
@@ -608,7 +622,28 @@ class GameEngine {
                 if (pos === 0) player.balance += 200;
             }
             player.position = pos;
-            this.handleSpace(player);
+            const space = this.board[pos];
+            const propData = this.properties[space.id];
+            if (propData.owner === null) {
+                // Unowned: player can buy
+                this.phase = 'waiting_action';
+                this.broadcastState();
+                this.checkBotTurn();
+            } else if (propData.owner !== player.id && !propData.mortgaged) {
+                // Owned by another player: apply card-specific rent
+                let rent;
+                if (card.action === 'advance_railroad') {
+                    const normalRent = this.calculateRent(space.id, player.id);
+                    rent = normalRent * 2;
+                } else {
+                    // advance_utility: always 10x dice roll
+                    rent = (this.dice[0] + this.dice[1]) * 10;
+                }
+                if (rent > 0) {
+                    this.addLog(`${player.name} pays CHF ${rent} rent to ${this.players.find(p=>p.id===propData.owner).name}.`);
+                    this.payMoney(player, rent, propData.owner);
+                }
+            }
         } else if (card.action === 'add_money') {
             player.balance += card.amount;
         } else if (card.action === 'pay_money') {
