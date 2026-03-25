@@ -247,6 +247,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('game:leave', () => {
+        const id = socket.currentLobby;
+        if (!id || !activeGames[id]) return;
+        activeGames[id].handleLeave(socket.user.userId);
+        socket.leave(id);
+        socket.currentLobby = null;
+    });
+
     socket.on('disconnect', () => {
         console.log(`User disconnected (${socket.id})`);
         if (socket.currentLobby) {
