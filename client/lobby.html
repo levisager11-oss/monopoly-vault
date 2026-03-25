@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly - Lobbies</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <header class="animate-in">
+        <h1>Monopoly Vault</h1>
+        <div class="user-info">
+            <span id="welcome-msg"></span>
+            <button id="stats-btn" class="ghost" onclick="window.location.href='stats.html'"><i data-lucide="bar-chart-2"></i> Stats</button>
+            <button id="logout-btn" class="secondary"><i data-lucide="log-out"></i> Logout</button>
+        </div>
+    </header>
+
+    <main class="lobby-main">
+        <section class="lobby-list-section animate-in delay-1">
+            <div class="section-header">
+                <h2>Open Lobbies</h2>
+                <button id="refresh-lobbies-btn" class="ghost"><i data-lucide="refresh-cw"></i> Refresh</button>
+            </div>
+            <table class="lobby-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Lobby Name</th>
+                        <th>Host</th>
+                        <th>Players</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="lobby-list">
+                    <!-- Lobbies will be populated here -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="create-lobby-section animate-in delay-2">
+            <h2>Create Lobby</h2>
+            <form id="create-lobby-form">
+                <div class="form-group">
+                    <label for="lobby-name">Lobby Name</label>
+                    <input type="text" id="lobby-name" placeholder="E.g. High Rollers" required>
+                </div>
+                <div class="form-group">
+                    <label for="max-players">Max Players (2-6)</label>
+                    <input type="number" id="max-players" min="2" max="6" value="4" required>
+                </div>
+                <div class="form-group">
+                    <label for="lobby-password">Password (optional)</label>
+                    <input type="password" id="lobby-password" placeholder="Leave empty for public">
+                </div>
+                
+                <div class="divider"></div>
+                
+                <h3>House Rules</h3>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="rule-free-parking"> Free Parking Jackpot</label>
+                    <label><input type="checkbox" id="rule-no-auctions"> No Auctions</label>
+                    <label><input type="checkbox" id="rule-speed-die"> Speed Die</label>
+                    <label><input type="checkbox" id="rule-double-go"> Double Starting Salary</label>
+                </div>
+                
+                <button type="submit" style="width: 100%; margin-top: 15px;"><i data-lucide="plus-circle"></i> Create Lobby</button>
+            </form>
+        </section>
+    </main>
+
+    <!-- Inside Lobby Modal -->
+    <div id="lobby-room-modal" class="modal hidden">
+        <div class="modal-content">
+            <h1 id="room-name">Lobby</h1>
+            <div class="room-layout">
+                <div class="players-list">
+                    <h3>Players (<span id="room-count" class="number">0</span>/<span id="room-max" class="number">0</span>)</h3>
+                    <ul id="room-players"></ul>
+                    
+                    <div id="host-controls" class="hidden">
+                        <div class="divider"></div>
+                        <h4>Add Bot</h4>
+                        <div class="form-group" style="display: flex; gap: 10px;">
+                            <select id="bot-difficulty">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                            <button id="add-bot-btn" class="ghost">Add</button>
+                        </div>
+                        <button id="start-game-btn" style="width:100%; margin-top:10px;" disabled><i data-lucide="play"></i> Start Game</button>
+                    </div>
+                </div>
+                <div class="chat-section">
+                    <div id="lobby-chat-messages" class="chat-messages"></div>
+                    <form id="lobby-chat-form">
+                        <input type="text" id="lobby-chat-input" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit" class="ghost"><i data-lucide="send"></i></button>
+                    </form>
+                </div>
+            </div>
+            <button id="leave-lobby-btn" class="secondary"><i data-lucide="arrow-left"></i> Leave Lobby</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/lobby.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly Vault - Game</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/game.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="game-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div id="players-panel">
+                <!-- Player items here -->
+            </div>
+            
+            <!-- Chat Panel anchor -->
+            <div id="chat-panel-container">
+                <div id="chat-tab">
+                    <span>CHAT</span>
+                    <span id="unread-badge" class="hidden">0</span>
+                </div>
+                <div id="chat-expanded" class="hidden">
+                    <div id="game-log"></div>
+                    <form id="game-chat-form">
+                        <input type="text" id="game-chat-input" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit" class="ghost"><i data-lucide="send"></i></button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Board Area -->
+        <main class="board-area">
+            <div class="board-container">
+                <div id="board" class="board">
+                    <!-- Generate 40 spaces via JS -->
+                    <div class="center-area">
+                        <div class="logo-text">MONOPOLY</div>
+                        <h2 id="turn-indicator" class="hidden"></h2>
+                        <div id="dice-display">
+                            <div id="die1" class="die-face"></div>
+                            <div id="die2" class="die-face"></div>
+                        </div>
+                        <div id="center-info"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Action Panel -->
+        <div class="action-panel">
+            <button id="btn-roll" class="ghost disabled-btn"><i data-lucide="dices"></i> ROLL DICE</button>
+            <button id="btn-end-turn" class="ghost disabled-btn"><i data-lucide="check"></i> END TURN</button>
+            <button id="btn-buy" class="ghost disabled-btn"><i data-lucide="shopping-cart"></i> BUY PROPERTY</button>
+            <button id="btn-auction" class="ghost disabled-btn"><i data-lucide="gavel"></i> AUCTION</button>
+            <button id="btn-pay-jail" class="ghost disabled-btn"><i data-lucide="dollar-sign"></i> PAY CHF 50</button>
+            <button id="btn-use-card" class="ghost disabled-btn"><i data-lucide="file-text"></i> USE CARD</button>
+            <button id="btn-trade" class="ghost"><i data-lucide="repeat"></i> TRADE</button>
+            <button id="btn-concede" class="ghost" style="color: var(--color-red); border-color: rgba(192,57,43,0.5);"><i data-lucide="flag"></i> CONCEDE</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="trade-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Trade Offer</h2>
+            <div id="trade-incoming" class="hidden">
+                <p id="trade-desc" style="font-size:1.1rem; margin-bottom:20px;"></p>
+                <div style="display:flex; gap:10px;">
+                    <button id="btn-accept-trade"><i data-lucide="check"></i> Accept</button>
+                    <button id="btn-decline-trade" class="secondary"><i data-lucide="x"></i> Decline</button>
+                </div>
+            </div>
+            <div id="trade-outgoing">
+                <div class="form-group">
+                    <label>Target Player:</label>
+                    <select id="trade-target"></select>
+                </div>
+                <div class="trade-cols">
+                    <div>
+                        <h3>You Offer</h3>
+                        <div class="form-group" style="margin-top:10px;">
+                            <label>Money (CHF)</label>
+                            <input type="number" id="trade-offer-money" placeholder="0" min="0">
+                        </div>
+                        <div id="trade-offer-props" class="prop-list"></div>
+                    </div>
+                    <div>
+                        <h3>You Request</h3>
+                        <div class="form-group" style="margin-top:10px;">
+                            <label>Money (CHF)</label>
+                            <input type="number" id="trade-req-money" placeholder="0" min="0">
+                        </div>
+                        <div id="trade-req-props" class="prop-list"></div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button id="btn-send-trade" style="flex:1;"><i data-lucide="send"></i> Send Offer</button>
+                    <button id="btn-cancel-trade" class="secondary" style="flex:1;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="auction-modal" class="modal hidden">
+        <div class="modal-content" style="max-width:400px; text-align:center;">
+            <h2>Auction</h2>
+            <p id="auction-desc" style="margin-bottom:10px;"></p>
+            <h3 style="margin-bottom:20px; font-family:'DM Mono'; font-size:1.5rem; color:var(--color-gold-light);">Highest Bid: CHF <span id="auction-highest">0</span></h3>
+            <div class="form-group">
+                <input type="number" id="auction-bid-amount" min="1" style="text-align:center; font-size:1.2rem; font-family:'DM Mono';">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button id="btn-bid" style="flex:1;"><i data-lucide="upload"></i> Bid</button>
+                <button id="btn-pass" class="secondary" style="flex:1;">Pass</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="property-modal" class="modal hidden">
+        <div class="modal-content" style="max-width:350px;">
+            <h2 id="prop-title" style="margin-bottom:10px; text-align:center;">Property</h2>
+            <div class="divider"></div>
+            <p id="prop-details"></p>
+            <div id="prop-controls" style="display:flex; flex-direction:column; gap:10px;">
+                <button id="btn-build" style="width:100%;"><i data-lucide="home"></i> Build House/Hotel</button>
+                <button id="btn-mortgage" class="secondary" style="width:100%;"><i data-lucide="lock"></i> Mortgage / Unmortgage</button>
+            </div>
+            <button id="btn-close-prop" class="ghost" style="width:100%; margin-top:10px;">Close</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/game.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

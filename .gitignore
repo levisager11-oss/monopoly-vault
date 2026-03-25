@@ -1,0 +1,10 @@
+node_modules/
+*.db
+*.log
+.DS_Store
+.env
+dist/
+build/
+.vscode/
+.gemini/
+.gemini_security/

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly - Stats</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <header class="animate-in">
+        <h1>Player Stats</h1>
+        <div class="user-info">
+            <button onclick="window.location.href='lobby.html'" class="ghost"><i data-lucide="arrow-left"></i> Back to Lobby</button>
+        </div>
+    </header>
+
+    <div class="stats-container animate-in delay-1">
+        <h2>My Stats</h2>
+        <div id="my-stats" style="margin-bottom: 30px; font-size: 1.1rem; color: var(--color-ivory);">Loading...</div>
+
+        <div class="divider"></div>
+
+        <h2>Leaderboard (Top 10 by Win Rate)</h2>
+        <table class="lobby-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Username</th>
+                    <th>Win Rate</th>
+                    <th>Games Played</th>
+                    <th>Games Won</th>
+                    <th>Bankruptcies</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            const token = localStorage.getItem('token');
+            if (!token) { window.location.href = 'index.html'; return; }
+
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            // My Stats
+            try {
+                const res = await fetch('/api/stats/me', { headers });
+                const data = await res.json();
+                if (res.ok) {
+                    const winRate = data.games_played ? ((data.games_won / data.games_played)*100).toFixed(1) : 0;
+                    document.getElementById('my-stats').innerHTML = `
+                        <div style="display:flex; gap:30px; margin-top:15px;">
+                            <div><span style="color:var(--color-ivory-muted);">Games Played:</span> <span class="number">${data.games_played}</span></div>
+                            <div><span style="color:var(--color-ivory-muted);">Games Won:</span> <span class="number" style="color:var(--color-green);">${data.games_won} (${winRate}%)</span></div>
+                            <div><span style="color:var(--color-ivory-muted);">Bankruptcies:</span> <span class="number" style="color:var(--color-red);">${data.bankruptcies}</span></div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            // Leaderboard
+            try {
+                const res = await fetch('/api/stats/leaderboard', { headers });
+                const data = await res.json();
+                if (res.ok) {
+                    const tbody = document.getElementById('leaderboard-body');
+                    data.forEach((row, i) => {
+                        let rankTrophy = i === 0 ? '<i data-lucide="trophy" style="color:gold;"></i> ' : (i+1);
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${rankTrophy}</td>
+                                <td style="color:var(--color-ivory); font-weight:bold;">${row.username}</td>
+                                <td class="number" style="color:var(--color-gold);">${row.win_rate.toFixed(1)}%</td>
+                                <td class="number">${row.games_played}</td>
+                                <td class="number" style="color:var(--color-green);">${row.games_won}</td>
+                                <td class="number" style="color:var(--color-red);">${row.bankruptcies}</td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons(); // refresh icons for dynamically added HTML
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        });
+    </script>
+</body>
+</html>
