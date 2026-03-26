@@ -24,6 +24,23 @@ A locally hosted, complete Monopoly web application built with Node.js, Express,
 3. Open your browser and navigate to:
    [http://localhost:3000](http://localhost:3000)
 
+## Database Commands
+
+You can manage your local database using the following npm scripts:
+
+- **Clear everything** (Users & Stats):
+  ```bash
+  npm run db:clear:all
+  ```
+- **Clear only statistics**:
+  ```bash
+  npm run db:clear:stats
+  ```
+- **Clear only users** (and their stats):
+  ```bash
+  npm run db:clear:users
+  ```
+
 ## Tech Stack
 - **Backend**: Node.js, Express.js
 - **Database**: SQLite (local, file-based)

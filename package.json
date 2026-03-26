@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "jest --verbose"
+    "test": "jest --verbose",
+    "db:clear:all": "node server/db/clear.js all",
+    "db:clear:stats": "node server/db/clear.js stats",
+    "db:clear:users": "node server/db/clear.js users"
   },
   "keywords": [],
   "author": "",
