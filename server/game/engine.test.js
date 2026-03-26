@@ -880,5 +880,28 @@ describe('GameEngine', () => {
             expect(p1.isBot).toBe(false);
             expect(p1.socketId).toBe('newSocket');
         });
+
+        test('game auto-closes when last human disconnects', () => {
+            const engine = createGame();
+            engine.handleDisconnect('p1');
+            engine.handleDisconnect('p2');
+            expect(engine.phase).toBe('closed');
+            expect(engine.io.to).toHaveBeenCalledWith(engine.gameId);
+            expect(engine.io._emit).toHaveBeenCalledWith('game:closed');
+        });
+
+        test('game auto-closes when last human leaves', () => {
+            const engine = createGame();
+            engine.handleLeave('p1');
+            engine.handleLeave('p2');
+            expect(engine.phase).toBe('closed');
+            expect(engine.io._emit).toHaveBeenCalledWith('game:closed');
+        });
+
+        test('game does not auto-close while human players remain', () => {
+            const engine = createGame();
+            engine.handleLeave('p1');
+            expect(engine.phase).not.toBe('closed');
+        });
     });
 });

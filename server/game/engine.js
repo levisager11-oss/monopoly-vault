@@ -158,6 +158,10 @@ class GameEngine {
             player.isBot = true;
             player.botDifficulty = 'medium';
             this.bots[player.id] = new Bot(this, player.id, 'medium');
+            if (!this.hasHumanPlayers()) {
+                this.autoClose();
+                return;
+            }
             this.broadcastState();
             this.checkBotTurn();
         }
@@ -185,9 +189,23 @@ class GameEngine {
             player.isBot = true;
             player.botDifficulty = 'medium';
             this.bots[player.id] = new Bot(this, player.id, 'medium');
+            if (!this.hasHumanPlayers()) {
+                this.autoClose();
+                return;
+            }
             this.broadcastState();
             this.checkBotTurn();
         }
+    }
+
+    hasHumanPlayers() {
+        return this.players.some(p => !p.isBot && !p.isBankrupt);
+    }
+
+    autoClose() {
+        this.phase = 'closed';
+        this.clearTurnTimer();
+        this.io.to(this.gameId).emit('game:closed');
     }
 
     startTurnTimer() {
