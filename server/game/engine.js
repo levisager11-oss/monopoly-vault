@@ -35,6 +35,7 @@ class GameEngine {
             name: p.name,
             isBot: p.isBot,
             botDifficulty: p.difficulty || null,
+            token: p.token || null,
             tokenColor: null, // assigned in frontend or later
             position: 0,
             balance: 1500,
@@ -105,6 +106,7 @@ class GameEngine {
                 name: p.name,
                 isBot: p.isBot,
                 botDifficulty: p.botDifficulty,
+                token: p.token,
                 tokenColor: p.tokenColor,
                 position: p.position,
                 balance: p.balance,
@@ -142,6 +144,11 @@ class GameEngine {
     addLog(msg) {
         this.log.push(msg);
         this.io.to(this.gameId).emit('game:event', msg);
+    }
+
+    addEventBanner(type, msg) {
+        this.io.to(this.gameId).emit('game:event_banner', { type, msg });
+        this.addLog(msg);
     }
 
     handleDisconnect(userId) {
@@ -337,7 +344,7 @@ class GameEngine {
         const d2 = Math.floor(Math.random() * 6) + 1;
         this.dice = [d1, d2];
         this.lastRoll = [d1, d2];
-        this.addLog(`${currentP.name} rolled ${d1} and ${d2}.`);
+        this.addEventBanner('roll', `🎲 ${currentP.name} rolled a ${d1} + ${d2} = ${d1 + d2}`);
 
         if (currentP.inJail) {
             if (d1 === d2) {
@@ -384,15 +391,18 @@ class GameEngine {
     }
 
     movePlayer(player, amount) {
-        let newPos = player.position + amount;
-        if (newPos >= 40) {
-            newPos -= 40;
+        let newPos = (player.position + amount) % 40;
+        if (newPos < 0) {
+            newPos = (newPos + 40) % 40;
+        }
+
+        // Pass go logic: if we moved forward and new position is less than old position, we passed Go
+        if (amount > 0 && newPos < player.position) {
             const salary = this.rules.doubleGo && newPos === 0 ? 400 : 200;
             player.balance += salary;
             this.addLog(`${player.name} passed Go and collected CHF ${salary}.`);
-        } else if (newPos < 0) {
-            newPos += 40;
         }
+
         player.position = newPos;
         this.handleSpace(player);
     }
@@ -411,7 +421,8 @@ class GameEngine {
             } else if (propData.owner !== player.id && !propData.mortgaged) {
                 const rent = this.calculateRent(space.id, player.id);
                 if (rent > 0) {
-                    this.addLog(`${player.name} pays CHF ${rent} rent to ${this.players.find(p=>p.id===propData.owner).name}.`);
+                    const payee = this.players.find(p=>p.id===propData.owner).name;
+                    this.addEventBanner('rent', `💸 ${player.name} paid ${payee} CHF ${rent} in rent`);
                     this.payMoney(player, rent, propData.owner);
                 }
             }
@@ -506,11 +517,11 @@ class GameEngine {
         player.properties = [];
         player.getOutOfJailCards = 0;
 
-        this.addLog(`${player.name} has gone bankrupt and been eliminated`);
+        this.addEventBanner('bankrupt', `💀 ${player.name} has gone bankrupt and is eliminated`);
 
         const alive = this.getAlivePlayers();
         if (alive.length === 1) {
-            this.addLog(`${alive[0].name} WINS THE GAME!`);
+            this.addEventBanner('win', `🏆 ${alive[0].name} wins the game!`);
             this.winner = alive[0].id;
             this.endGame(alive[0]);
         } else {
@@ -549,6 +560,7 @@ class GameEngine {
         player.inJail = true;
         player.jailTurns = 0;
         player.doublesCount = 0;
+        this.addEventBanner('jail', `🚔 ${player.name} has been sent to Jail!`);
         this.phase = 'waiting_action';
         this.broadcastState();
         this.checkBotTurn();
@@ -560,7 +572,7 @@ class GameEngine {
             player.balance -= space.price;
             this.properties[space.id].owner = player.id;
             player.properties.push(space.id);
-            this.addLog(`${player.name} bought ${space.name} for CHF ${space.price}.`);
+            this.addEventBanner('buy', `🏠 ${player.name} bought ${space.name} for CHF ${space.price}`);
 
             this.broadcastState();
             this.checkBotTurn();
@@ -672,7 +684,7 @@ class GameEngine {
     drawCard(player, deck, type) {
         const card = deck.shift();
         deck.push(card);
-        this.addLog(`${player.name} drew ${type}: ${card.text}`);
+        this.addEventBanner('card', `🃏 ${player.name} drew: ${card.text}`);
 
         if (card.action === 'advance') {
             let oldPos = player.position;

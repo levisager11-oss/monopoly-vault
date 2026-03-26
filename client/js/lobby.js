@@ -47,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('lobby-chat-form');
     const chatInput = document.getElementById('lobby-chat-input');
     const chatMessages = document.getElementById('lobby-chat-messages');
+    const tokenGrid = document.getElementById('token-grid');
+
+    const availableTokens = ['🎩', '🚗', '🐕', '🪣', '🚢', '🛒', '👟', '🧵'];
 
     let currentLobbyId = null;
     let isHost = false;
@@ -176,7 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             const isBotStr = p.isBot ? '<span style="color:var(--color-ivory-muted); font-size:0.8rem;">(Bot)</span>' : '';
             const hostCrown = p.id === lobby.host ? '<i data-lucide="crown" style="color:var(--color-gold); width:18px;"></i>' : '';
-            li.innerHTML = `<span>${p.name} ${isBotStr}</span> <span>${hostCrown}</span>`;
+            const tokenStr = p.token ? `<div class="player-token-display">${p.token}</div>` : `<div class="player-token-display" style="border: 1px dashed var(--color-border);">?</div>`;
+            li.innerHTML = `<div style="display:flex; align-items:center;">${tokenStr} <span>${p.name} ${isBotStr}</span></div> <span>${hostCrown}</span>`;
             roomPlayersEl.appendChild(li);
         });
 
@@ -188,7 +192,34 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             hostControls.classList.add('hidden');
         }
+
+        renderTokenPicker(lobby);
         lucide.createIcons();
+    }
+
+    function renderTokenPicker(lobby) {
+        const myPlayer = lobby.players.find(p => p.socketId === socket.id);
+        const myToken = myPlayer ? myPlayer.token : null;
+
+        tokenGrid.innerHTML = '';
+        availableTokens.forEach(t => {
+            const div = document.createElement('div');
+            const isTaken = lobby.players.some(p => p.token === t && p.socketId !== socket.id);
+            const isMine = myToken === t;
+
+            div.className = 'token-option';
+            if (isTaken) div.classList.add('taken');
+            if (isMine) div.classList.add('selected');
+
+            div.textContent = t;
+
+            if (!isTaken) {
+                div.onclick = () => {
+                    socket.emit('select_token', t);
+                };
+            }
+            tokenGrid.appendChild(div);
+        });
     }
 
     // Initial fetch

@@ -159,6 +159,118 @@
     letter-spacing: 0.05em;
 }
 
+/* Inventory Panel */
+#inventory-panel-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-deep);
+    overflow: hidden;
+}
+
+.inventory-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-gold);
+    letter-spacing: 0.08em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-raised);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+#inventory-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inv-card {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    display: flex;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.inv-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border-color: var(--color-gold);
+}
+
+.inv-card-color {
+    width: 12px;
+    flex-shrink: 0;
+}
+
+.inv-card-content {
+    flex: 1;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.inv-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inv-card-title {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--color-ivory);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+}
+
+.inv-card-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--color-gold-light);
+}
+
+.inv-card-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--color-ivory-muted);
+}
+
+.inv-card.mortgaged {
+    opacity: 0.5;
+}
+
+.inv-card.jail-card {
+    border-color: var(--color-blue-accent);
+}
+
+.inv-card.jail-card .inv-card-color {
+    background: var(--color-blue-accent);
+}
+
+.inv-card.jail-card .inv-card-title {
+    max-width: none;
+}
+
+#players-panel {
+    flex: none;
+    max-height: 40%;
+}
+
 /* Chat Panel (Anchored to sidebar bottom) */
 #chat-panel-container {
     border-top: 1px solid var(--color-border);
@@ -198,11 +310,46 @@
     flex: 1;
     overflow-y: auto;
     padding: 10px 12px;
-    font-size: 0.83rem;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--color-ivory-muted);
     display: flex;
     flex-direction: column;
     gap: 4px;
     line-height: 1.45;
+}
+
+#event-banner-container {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 300;
+    pointer-events: none;
+}
+
+.event-banner {
+    background: rgba(13, 15, 20, 0.9);
+    border-bottom: 2px solid var(--color-gold);
+    color: var(--color-ivory);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    transform: translateY(-50px);
+    opacity: 0;
+    transition: transform 300ms ease, opacity 300ms ease;
+    text-align: center;
+    min-width: 400px;
+}
+
+.event-banner.show {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .msg-system {
@@ -382,10 +529,12 @@
     grid-template-rows: repeat(3, 1fr);
     padding: 8px;
     gap: 4px;
+    align-items: center;
+    justify-items: center;
 }
 
 .dot {
-    width: 10px; height: 10px;
+    width: 8px; height: 8px;
     background: #111;
     border-radius: 50%;
 }
@@ -442,4 +591,5 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.5);
     transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 50;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
 }
