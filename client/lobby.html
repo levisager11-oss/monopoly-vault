@@ -72,13 +72,22 @@
 
     <!-- Inside Lobby Modal -->
     <div id="lobby-room-modal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 900px;">
             <h1 id="room-name">Lobby</h1>
             <div class="room-layout">
                 <div class="players-list">
                     <h3>Players (<span id="room-count" class="number">0</span>/<span id="room-max" class="number">0</span>)</h3>
                     <ul id="room-players"></ul>
                     
+                    <div class="divider"></div>
+
+                    <div id="token-picker-section">
+                        <h4>Choose Token</h4>
+                        <div id="token-grid" class="token-grid">
+                            <!-- Tokens populated via JS -->
+                        </div>
+                    </div>
+
                     <div id="host-controls" class="hidden">
                         <div class="divider"></div>
                         <h4>Add Bot</h4>

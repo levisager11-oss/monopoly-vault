@@ -45,8 +45,8 @@ const boardDef = [
 
 const dieDots = {
     1: [4],
-    2: [0, 8],
-    3: [0, 4, 8],
+    2: [2, 6],
+    3: [2, 4, 6],
     4: [0, 2, 6, 8],
     5: [0, 2, 4, 6, 8],
     6: [0, 2, 3, 5, 6, 8]
@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const boardEl = document.getElementById('board');
     const playersPanel = document.getElementById('players-panel');
+    const inventoryPanel = document.getElementById('inventory-panel');
     const turnIndicator = document.getElementById('turn-indicator');
     const diceDisplay = document.getElementById('dice-display');
     const gameLog = document.getElementById('game-log');
@@ -92,6 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const auctionModal = document.getElementById('auction-modal');
     const propertyModal = document.getElementById('property-modal');
 
+    // Event Banners
+    const eventBannerContainer = document.getElementById('event-banner-container');
+    const bannerQueue = [];
+    let isShowingBanner = false;
+
     chatTab.onclick = () => {
         isChatExpanded = !isChatExpanded;
         chatExpanded.classList.toggle('hidden', !isChatExpanded);
@@ -108,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderBoard();
         renderPlayers();
+        renderInventory();
         updateActions();
         handleModals();
         renderDice(state.dice);
@@ -121,6 +128,35 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('game:event', (msg) => {
         addLogMessage(msg, 'msg-system');
     });
+
+    socket.on('game:event_banner', ({ type, msg }) => {
+        bannerQueue.push(msg);
+        processBannerQueue();
+    });
+
+    function processBannerQueue() {
+        if (isShowingBanner || bannerQueue.length === 0) return;
+        isShowingBanner = true;
+        const msg = bannerQueue.shift();
+
+        const banner = document.createElement('div');
+        banner.className = 'event-banner';
+        banner.textContent = msg;
+        eventBannerContainer.appendChild(banner);
+
+        // trigger reflow
+        void banner.offsetWidth;
+        banner.classList.add('show');
+
+        setTimeout(() => {
+            banner.classList.remove('show');
+            setTimeout(() => {
+                banner.remove();
+                isShowingBanner = false;
+                setTimeout(processBannerQueue, 300);
+            }, 300);
+        }, 3000);
+    }
 
     socket.on('chat_message', ({ sender, msg }) => {
         addLogMessage(`${sender}: ${msg}`, 'msg-player');
@@ -275,7 +311,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 t.id = 'token-' + p.id;
                 t.className = 'token';
                 t.style.background = colors[idx % colors.length];
-                t.textContent = p.name[0].toUpperCase();
+                t.textContent = p.token || p.name[0].toUpperCase();
+                t.style.fontSize = p.token ? '14px' : '10px';
                 boardEl.appendChild(t);
             }
             if (p.isBankrupt && t) t.remove();
@@ -303,6 +340,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function renderInventory() {
+        if (!inventoryPanel) return;
+        inventoryPanel.innerHTML = '';
+
+        const me = gameState.players.find(p => p.id === myId);
+        if (!me) return;
+
+        // Render Get Out of Jail cards
+        for (let i = 0; i < me.getOutOfJailCards; i++) {
+            const card = document.createElement('div');
+            card.className = 'inv-card jail-card';
+            card.innerHTML = `
+                <div class="inv-card-color"></div>
+                <div class="inv-card-content">
+                    <div class="inv-card-header">
+                        <span class="inv-card-title"><i data-lucide="lock-open" style="width:14px; margin-right:4px;"></i>Get Out of Jail Free</span>
+                    </div>
+                </div>
+            `;
+            inventoryPanel.appendChild(card);
+        }
+
+        // Render Properties
+        me.properties.forEach(propId => {
+            const def = boardDef[propId];
+            const prop = gameState.properties[propId];
+
+            const card = document.createElement('div');
+            card.className = 'inv-card' + (prop.mortgaged ? ' mortgaged' : '');
+
+            let rentText = '';
+            if (def.type === 'property') {
+                if (prop.hotel > 0) rentText = 'Hotel';
+                else if (prop.houses > 0) rentText = `${prop.houses} House${prop.houses > 1 ? 's' : ''}`;
+            }
+
+            let colorStyle = def.color ? `background-color: ${def.color};` : 'background-color: var(--color-border);';
+
+            card.innerHTML = `
+                <div class="inv-card-color" style="${colorStyle}"></div>
+                <div class="inv-card-content">
+                    <div class="inv-card-header">
+                        <span class="inv-card-title">${def.name}</span>
+                        <span class="inv-card-price">CHF ${def.price}</span>
+                    </div>
+                    <div class="inv-card-details">
+                        <span>${prop.mortgaged ? 'MORTGAGED' : rentText}</span>
+                    </div>
+                </div>
+            `;
+            card.onclick = () => openPropertyModal(propId);
+            inventoryPanel.appendChild(card);
+        });
+
+        lucide.createIcons();
+    }
+
     function renderPlayers() {
         playersPanel.innerHTML = '';
         gameState.players.forEach((p, idx) => {
@@ -311,9 +405,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const isMe = p.id === myId;
             const turnBadge = p.id === gameState.currentPlayerId ? '<div class="turn-badge">YOUR TURN</div>' : '';
+            const tokenIcon = p.token || p.name[0].toUpperCase();
 
             div.innerHTML = `
-                <div class="player-token-circle" style="background:${colors[idx % colors.length]}"></div>
+                <div class="player-token-circle" style="background:${colors[idx % colors.length]}; display:flex; align-items:center; justify-content:center; color:white; font-size:${p.token ? '18px' : '14px'}; font-weight:800; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">${tokenIcon}</div>
                 <div class="player-info-col">
                     <div class="player-name-row">
                         <span class="player-name">${p.name} ${isMe ? '(You)' : ''}</span>

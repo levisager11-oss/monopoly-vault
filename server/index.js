@@ -84,7 +84,7 @@ io.on('connection', (socket) => {
             password: config.password || '',
             host: socket.id,
             hostName: socket.user.username,
-            players: [{ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id }],  
+            players: [{ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id, token: null }],
             status: 'waiting',
             rules: config.rules || {}
         };
@@ -103,7 +103,7 @@ io.on('connection', (socket) => {
 
         if (lobby.players.find(p => p.id === socket.user.userId)) return;
 
-        lobby.players.push({ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id });
+        lobby.players.push({ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id, token: null });
         socket.join(id);
         socket.currentLobby = id;
 
@@ -154,11 +154,30 @@ io.on('connection', (socket) => {
             id: botId,
             name: `Bot - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
             isBot: true,
-            difficulty: difficulty
+            difficulty: difficulty,
+            token: null
         });
 
         io.to(lobby.id).emit('lobby_updated', lobby);
         broadcastLobbies();
+    });
+
+    socket.on('select_token', (token) => {
+        if (!socket.currentLobby) return;
+        const lobby = lobbies[socket.currentLobby];
+        if (!lobby) return;
+
+        const availableTokens = ['🎩', '🚗', '🐕', '🪣', '🚢', '🛒', '👟', '🧵'];
+        if (!availableTokens.includes(token)) return;
+
+        // Check if token is already taken
+        if (lobby.players.some(p => p.token === token)) return;
+
+        const player = lobby.players.find(p => p.id === socket.user.userId);
+        if (player) {
+            player.token = token;
+            io.to(lobby.id).emit('lobby_updated', lobby);
+        }
     });
 
     socket.on('lobby_chat', (msg) => {
@@ -171,6 +190,20 @@ io.on('connection', (socket) => {
         const lobby = lobbies[socket.currentLobby];
         if (lobby.host !== socket.id) return;
         if (lobby.players.length < 2) return;
+
+        // Auto-assign remaining tokens
+        const allTokens = ['🎩', '🚗', '🐕', '🪣', '🚢', '🛒', '👟', '🧵'];
+        const takenTokens = lobby.players.map(p => p.token).filter(t => t);
+        let availableTokens = allTokens.filter(t => !takenTokens.includes(t));
+
+        // Shuffle available
+        availableTokens = availableTokens.sort(() => Math.random() - 0.5);
+
+        lobby.players.forEach(p => {
+            if (!p.token) {
+                p.token = availableTokens.pop();
+            }
+        });
 
         lobby.status = 'playing';
         io.to(lobby.id).emit('game_started');
