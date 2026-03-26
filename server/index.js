@@ -18,6 +18,20 @@ app.use(express.static(path.join(__dirname, '../client')));
 app.use('/api/auth', authRoutes);
 app.use('/api/stats', statsRoutes);
 
+// Admin route to clear lobbies (local only)
+app.post('/api/admin/clear-lobbies', (req, res) => {
+    const lobbyCount = Object.keys(lobbies).length;
+    const gameCount = Object.keys(activeGames).length;
+    
+    for (const id in lobbies) delete lobbies[id];
+    for (const id in activeGames) delete activeGames[id];
+    
+    io.emit('game:error', 'Server cleared all lobbies and games.');
+    io.emit('lobbies_list', {});
+    
+    res.json({ message: `Cleared ${lobbyCount} lobbies and ${gameCount} active games.` });
+});
+
 // Lobby & Game Management
 const lobbies = {};
 const activeGames = {}; // keyed by gameId
@@ -84,7 +98,7 @@ io.on('connection', (socket) => {
             password: config.password || '',
             host: socket.id,
             hostName: socket.user.username,
-            players: [{ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id, token: null }],
+            players: [{ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id }],  
             status: 'waiting',
             rules: config.rules || {}
         };
@@ -103,7 +117,7 @@ io.on('connection', (socket) => {
 
         if (lobby.players.find(p => p.id === socket.user.userId)) return;
 
-        lobby.players.push({ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id, token: null });
+        lobby.players.push({ id: socket.user.userId, name: socket.user.username, isBot: false, socketId: socket.id });
         socket.join(id);
         socket.currentLobby = id;
 
@@ -154,30 +168,11 @@ io.on('connection', (socket) => {
             id: botId,
             name: `Bot - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
             isBot: true,
-            difficulty: difficulty,
-            token: null
+            difficulty: difficulty
         });
 
         io.to(lobby.id).emit('lobby_updated', lobby);
         broadcastLobbies();
-    });
-
-    socket.on('select_token', (token) => {
-        if (!socket.currentLobby) return;
-        const lobby = lobbies[socket.currentLobby];
-        if (!lobby) return;
-
-        const availableTokens = ['🎩', '🚗', '🐕', '🪣', '🚢', '🛒', '👟', '🧵'];
-        if (!availableTokens.includes(token)) return;
-
-        // Check if token is already taken
-        if (lobby.players.some(p => p.token === token)) return;
-
-        const player = lobby.players.find(p => p.id === socket.user.userId);
-        if (player) {
-            player.token = token;
-            io.to(lobby.id).emit('lobby_updated', lobby);
-        }
     });
 
     socket.on('lobby_chat', (msg) => {
@@ -191,20 +186,6 @@ io.on('connection', (socket) => {
         if (lobby.host !== socket.id) return;
         if (lobby.players.length < 2) return;
 
-        // Auto-assign remaining tokens
-        const allTokens = ['🎩', '🚗', '🐕', '🪣', '🚢', '🛒', '👟', '🧵'];
-        const takenTokens = lobby.players.map(p => p.token).filter(t => t);
-        let availableTokens = allTokens.filter(t => !takenTokens.includes(t));
-
-        // Shuffle available
-        availableTokens = availableTokens.sort(() => Math.random() - 0.5);
-
-        lobby.players.forEach(p => {
-            if (!p.token) {
-                p.token = availableTokens.pop();
-            }
-        });
-
         lobby.status = 'playing';
         io.to(lobby.id).emit('game_started');
         broadcastLobbies();
@@ -214,11 +195,9 @@ io.on('connection', (socket) => {
         activeGames[lobby.id] = game;
         game.start();
         
-        // Remove from waiting lobbies
         delete lobbies[lobby.id];
     });
 
-    // Unified Game Action Routing
     socket.on('game:roll', () => {
         if (socket.currentLobby && activeGames[socket.currentLobby]) {
             activeGames[socket.currentLobby].handleAction(socket.user.userId, { type: 'roll' });
@@ -280,17 +259,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('game:leave', () => {
-        const id = socket.currentLobby;
-        if (!id || !activeGames[id]) return;
-        activeGames[id].handleLeave(socket.user.userId);
-        if (activeGames[id] && activeGames[id].phase === 'closed') {
-            delete activeGames[id];
-        }
-        socket.leave(id);
-        socket.currentLobby = null;
-    });
-
     socket.on('disconnect', () => {
         console.log(`User disconnected (${socket.id})`);
         if (socket.currentLobby) {
@@ -300,18 +268,13 @@ io.on('connection', (socket) => {
                 const player = game.players.find(p => p.id === socket.user.userId);
                 if (player) {
                     player.socketId = null;
-                    // Start 60s disconnect timer
                     setTimeout(() => {
                         if (activeGames[id] && activeGames[id].players.find(p => p.id === socket.user.userId && !p.socketId)) {
                             activeGames[id].handleDisconnect(socket.user.userId);
-                            if (activeGames[id] && activeGames[id].phase === 'closed') {
-                                delete activeGames[id];
-                            }
                         }
                     }, 60000);
                 }
             } else if (lobbies[id]) {
-                // Was in waiting lobby
                 const leaveMock = { currentLobby: socket.currentLobby, id: socket.id, user: socket.user, leave: socket.leave.bind(socket) };
                 socket.emit('leave_lobby');
             }

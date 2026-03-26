@@ -41,6 +41,11 @@ You can manage your local database using the following npm scripts:
   npm run db:clear:users
   ```
 
+- **Clear all active lobbies and games**:
+  ```bash
+  npm run lobbies:clear
+  ```
+
 ## Tech Stack
 - **Backend**: Node.js, Express.js
 - **Database**: SQLite (local, file-based)
