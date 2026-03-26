@@ -72,10 +72,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const inventoryPanel = document.getElementById('inventory-panel');
     const turnIndicator = document.getElementById('turn-indicator');
     const diceDisplay = document.getElementById('dice-display');
-    const gameLog = document.getElementById('game-log');
+        const eventsTabBtn = document.getElementById('events-tab-btn');
+    const chatTabBtn = document.getElementById('chat-tab-btn');
+    const eventsLog = document.getElementById('events-log');
+    const chatLog = document.getElementById('chat-log');
     const unreadBadge = document.getElementById('unread-badge');
-    const chatTab = document.getElementById('chat-tab');
-    const chatExpanded = document.getElementById('chat-expanded');
+
+    let activeTab = 'EVENTS';
+    let unreadCount = 0;
+
+    if (eventsTabBtn && chatTabBtn) {
+        eventsTabBtn.addEventListener('click', () => {
+            activeTab = 'EVENTS';
+            eventsTabBtn.classList.add('active');
+            chatTabBtn.classList.remove('active');
+            eventsLog.classList.remove('hidden');
+            chatLog.classList.add('hidden');
+        });
+
+        chatTabBtn.addEventListener('click', () => {
+            activeTab = 'CHAT';
+            chatTabBtn.classList.add('active');
+            eventsTabBtn.classList.remove('active');
+            chatLog.classList.remove('hidden');
+            eventsLog.classList.add('hidden');
+
+            unreadCount = 0;
+            unreadBadge.textContent = '0';
+            unreadBadge.classList.add('hidden');
+            chatLog.scrollTop = chatLog.scrollHeight;
+        });
+    }
 
     // Action Buttons
     const btnRoll = document.getElementById('btn-roll');
@@ -126,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('game:event', (msg) => {
-        addLogMessage(msg, 'msg-system');
+        logEvent(msg, true);
     });
 
     socket.on('game:event_banner', ({ type, msg }) => {
@@ -159,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket.on('chat_message', ({ sender, msg }) => {
-        addLogMessage(`${sender}: ${msg}`, 'msg-player');
+        logEvent(`${sender}: ${msg}`, true);
         if (!isChatExpanded) {
             unreadCount++;
             unreadBadge.textContent = unreadCount;
@@ -171,22 +198,124 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(msg);
     });
 
-    function addLogMessage(text, className) {
+
+
+    function logEvent(text, isSystem = false) {
+        if (!eventsLog) return;
         const div = document.createElement('div');
-        div.className = `chat-message ${className}`;
-        div.textContent = text;
-        gameLog.appendChild(div);
-        gameLog.scrollTop = gameLog.scrollHeight;
+        div.className = 'event-entry';
+
+        let iconHtml = '<i data-lucide="info" class="event-icon"></i>';
+        if (text.includes('rolled')) iconHtml = '<i data-lucide="dice-5" class="event-icon"></i>';
+        else if (text.includes('bought')) iconHtml = '<i data-lucide="home" class="event-icon"></i>';
+        else if (text.includes('paid')) iconHtml = '<i data-lucide="dollar-sign" class="event-icon"></i>';
+        else iconHtml = '<i data-lucide="circle" class="event-icon"></i>';
+
+        const contentClass = isSystem ? 'event-content event-system' : 'event-content';
+        const date = new Date();
+        const timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+
+        const textDiv = document.createElement('div');
+        textDiv.className = contentClass;
+        textDiv.textContent = text;
+
+        div.innerHTML = `
+            ${iconHtml}
+        `;
+        div.appendChild(textDiv);
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'event-timestamp';
+        timeDiv.textContent = timeStr;
+        div.appendChild(timeDiv);
+
+        eventsLog.appendChild(div);
+        eventsLog.scrollTop = eventsLog.scrollHeight;
+
+        if (typeof lucide !== 'undefined') lucide.createIcons({ root: div });
     }
 
-    document.getElementById('game-chat-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.getElementById('game-chat-input');
-        if (input.value.trim()) {
-            socket.emit('lobby_chat', input.value.trim());
-            input.value = '';
+    function addChatMessage(playerId, playerName, message, timestamp, isOwn) {
+        if (!chatLog) return;
+        const div = document.createElement('div');
+        div.className = 'chat-message' + (isOwn ? ' own' : '');
+
+        const date = new Date(timestamp);
+        const timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+        const initial = playerName ? playerName.charAt(0).toUpperCase() : '?';
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'chat-avatar';
+        avatarDiv.textContent = initial;
+        div.appendChild(avatarDiv);
+
+        const wrapDiv = document.createElement('div');
+        wrapDiv.className = 'chat-content-wrap';
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'chat-header';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'chat-player-name';
+        nameSpan.textContent = playerName;
+        headerDiv.appendChild(nameSpan);
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'chat-timestamp';
+        timeSpan.textContent = timeStr;
+        headerDiv.appendChild(timeSpan);
+
+        wrapDiv.appendChild(headerDiv);
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'chat-bubble';
+        bubbleDiv.textContent = message;
+        wrapDiv.appendChild(bubbleDiv);
+
+        div.appendChild(wrapDiv);
+
+        chatLog.appendChild(div);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    socket.on('game:chat', ({ playerId, playerName, message, timestamp }) => {
+        if (playerId === myId) return; // Optimistic update guard
+
+        addChatMessage(playerId, playerName, message, timestamp, false);
+
+        if (activeTab !== 'CHAT') {
+            unreadCount++;
+            if (unreadBadge) {
+                unreadBadge.textContent = unreadCount;
+                unreadBadge.classList.remove('hidden');
+            }
         }
     });
+
+    const chatForm = document.getElementById('game-chat-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('game-chat-input');
+            const text = input.value.trim();
+            if (text) {
+                const timestamp = Date.now();
+                const me = gameState.players.find(p => p.id === myId);
+                const playerName = me ? me.name : 'You';
+
+                addChatMessage(myId, playerName, text, timestamp, true);
+
+                socket.emit('game:chat', {
+                    playerId: myId,
+                    playerName: playerName,
+                    message: text,
+                    timestamp
+                });
+
+                input.value = '';
+            }
+        });
+    }
 
     // Actions
     btnRoll.onclick = () => {

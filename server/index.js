@@ -243,6 +243,12 @@ io.on('connection', (socket) => {
             activeGames[socket.currentLobby].handleAction(socket.user.userId, { type: 'auction_bid', bid: payload });
         }
     });
+
+    socket.on('game:chat', (payload) => {
+        if (!socket.currentLobby) return;
+        io.to(socket.currentLobby).emit('game:chat', payload);
+    });
+
     socket.on('game:concede', () => {
         if (socket.currentLobby && activeGames[socket.currentLobby]) {
             activeGames[socket.currentLobby].handleAction(socket.user.userId, { type: 'concede' });
