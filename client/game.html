@@ -27,21 +27,7 @@
                 </div>
             </div>
 
-            <!-- Chat Panel anchor -->
-            <div id="chat-panel-container">
-                <div id="chat-tab">
-                    <span>CHAT</span>
-                    <span id="unread-badge" class="hidden">0</span>
-                </div>
-                <div id="chat-expanded" class="hidden">
-                    <div id="game-log"></div>
-                    <form id="game-chat-form">
-                        <input type="text" id="game-chat-input" placeholder="Type a message..." autocomplete="off">
-                        <button type="submit" class="ghost"><i data-lucide="send"></i></button>
-                    </form>
-                </div>
-            </div>
-        </aside>
+            </aside>
 
         <!-- Main Board Area -->
         <main class="board-area">
@@ -67,6 +53,27 @@
                 </div>
             </div>
         </main>
+        <!-- Right Sidebar -->
+        <aside class="sidebar right-sidebar">
+            <div class="sidebar-header right-sidebar-tabs">
+                <button id="events-tab-btn" class="tab-btn active">EVENTS</button>
+                <button id="chat-tab-btn" class="tab-btn">
+                    CHAT <span id="unread-badge" class="hidden badge">0</span>
+                </button>
+            </div>
+
+            <div id="events-log" class="log-container"></div>
+
+            <div id="chat-log" class="log-container hidden"></div>
+
+            <div class="chat-input-container">
+                <form id="game-chat-form">
+                    <input type="text" id="game-chat-input" placeholder="Type a message..." autocomplete="off" required>
+                    <button type="submit" id="game-chat-submit" class="icon-btn gold-btn"><i data-lucide="send"></i></button>
+                </form>
+            </div>
+        </aside>
+
 
         <!-- Action Panel -->
         <div class="action-panel">
