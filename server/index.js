@@ -284,6 +284,9 @@ io.on('connection', (socket) => {
         const id = socket.currentLobby;
         if (!id || !activeGames[id]) return;
         activeGames[id].handleLeave(socket.user.userId);
+        if (activeGames[id] && activeGames[id].phase === 'closed') {
+            delete activeGames[id];
+        }
         socket.leave(id);
         socket.currentLobby = null;
     });
@@ -301,6 +304,9 @@ io.on('connection', (socket) => {
                     setTimeout(() => {
                         if (activeGames[id] && activeGames[id].players.find(p => p.id === socket.user.userId && !p.socketId)) {
                             activeGames[id].handleDisconnect(socket.user.userId);
+                            if (activeGames[id] && activeGames[id].phase === 'closed') {
+                                delete activeGames[id];
+                            }
                         }
                     }, 60000);
                 }
