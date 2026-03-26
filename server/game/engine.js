@@ -205,6 +205,7 @@ class GameEngine {
     autoClose() {
         this.phase = 'closed';
         this.clearTurnTimer();
+        this.bots = {};
         this.io.to(this.gameId).emit('game:closed');
     }
 
